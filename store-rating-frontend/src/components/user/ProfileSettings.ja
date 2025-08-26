@@ -1,0 +1,334 @@
+import React, { useState } from 'react';
+import { User, Lock, Save, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
+
+const ProfileSettings = () => {
+  const { user, updatePassword } = useAuth();
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validatePasswordForm = () => {
+    const newErrors = {};
+
+    if (!passwordData.currentPassword) {
+      newErrors.currentPassword = 'Current password is required';
+    }
+
+    if (!passwordData.newPassword) {
+      newErrors.newPassword = 'New password is required';
+    } else {
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,16}$/;
+      if (!passwordRegex.test(passwordData.newPassword)) {
+        newErrors.newPassword = 'Password must be 8-16 characters with at least one uppercase letter and one special character';
+      }
+    }
+
+    if (!passwordData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validatePasswordForm()) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const result = await updatePassword(passwordData.currentPassword, passwordData.newPassword);
+      
+      if (result.success) {
+        toast.success('Password updated successfully');
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setErrors({});
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to update password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
+        <p className="text-gray-600">Manage your account settings and preferences</p>
+      </div>
+
+      {/* Profile Information */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center mb-6">
+          <User className="h-5 w-5 text-gray-400 mr-2" />
+          <h2 className="text-lg font-medium text-gray-900">Profile Information</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <div className="mt-1 p-3 border border-gray-300 rounded-md bg-gray-50">
+              <p className="text-sm text-gray-900">{user?.name}</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <div className="mt-1 p-3 border border-gray-300 rounded-md bg-gray-50">
+              <p className="text-sm text-gray-900">{user?.email}</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Role</label>
+            <div className="mt-1 p-3 border border-gray-300 rounded-md bg-gray-50">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                user?.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                user?.role === 'user' ? 'bg-blue-100 text-blue-800' :
+                'bg-green-100 text-green-800'
+              }`}>
+                {user?.role?.replace('_', ' ').toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Member Since</label>
+            <div className="mt-1 p-3 border border-gray-300 rounded-md bg-gray-50">
+              <p className="text-sm text-gray-900">
+                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700">Address</label>
+          <div className="mt-1 p-3 border border-gray-300 rounded-md bg-gray-50">
+            <p className="text-sm text-gray-900">{user?.address}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-md">
+          <p className="text-sm text-blue-700">
+            <strong>Note:</strong> Profile information can only be updated by an administrator. 
+            If you need to change your name, email, or address, please contact support.
+          </p>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center mb-6">
+          <Lock className="h-5 w-5 text-gray-400 mr-2" />
+          <h2 className="text-lg font-medium text-gray-900">Change Password</h2>
+        </div>
+
+        <form onSubmit={handlePasswordSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+              Current Password
+            </label>
+            <div className="mt-1 relative">
+              <input
+                id="currentPassword"
+                name="currentPassword"
+                type={showPasswords.current ? 'text' : 'password'}
+                value={passwordData.currentPassword}
+                onChange={handlePasswordChange}
+                className={`appearance-none block w-full px-3 py-2 border ${
+                  errors.currentPassword ? 'border-red-300' : 'border-gray-300'
+                } rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                placeholder="Enter your current password"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => togglePasswordVisibility('current')}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  {showPasswords.current ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            {errors.currentPassword && (
+              <p className="mt-2 text-sm text-red-600">{errors.currentPassword}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+              New Password
+            </label>
+            <div className="mt-1 relative">
+              <input
+                id="newPassword"
+                name="newPassword"
+                type={showPasswords.new ? 'text' : 'password'}
+                value={passwordData.newPassword}
+                onChange={handlePasswordChange}
+                className={`appearance-none block w-full px-3 py-2 border ${
+                  errors.newPassword ? 'border-red-300' : 'border-gray-300'
+                } rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                placeholder="Enter your new password"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => togglePasswordVisibility('new')}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  {showPasswords.new ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            {errors.newPassword && (
+              <p className="mt-2 text-sm text-red-600">{errors.newPassword}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Password must be 8-16 characters with at least one uppercase letter and one special character
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirm New Password
+            </label>
+            <div className="mt-1 relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showPasswords.confirm ? 'text' : 'password'}
+                value={passwordData.confirmPassword}
+                onChange={handlePasswordChange}
+                className={`appearance-none block w-full px-3 py-2 border ${
+                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                } rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+                placeholder="Confirm your new password"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <button
+                  type="button"
+                  onClick={() => togglePasswordVisibility('confirm')}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  {showPasswords.confirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            {errors.confirmPassword && (
+              <p className="mt-2 text-sm text-red-600">{errors.confirmPassword}</p>
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin -ml-1 mr-3 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Update Password
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Account Information */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-6">Account Information</h2>
+        
+        <div className="space-y-4">
+          <div className="flex justify-between items-center py-3 border-b border-gray-200">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Account Status</h3>
+              <p className="text-sm text-gray-500">Your account is active and in good standing</p>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center py-3 border-b border-gray-200">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h3>
+              <p className="text-sm text-gray-500">Add an extra layer of security to your account</p>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              Not Enabled
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center py-3">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">Data Export</h3>
+              <p className="text-sm text-gray-500">Download a copy of your account data</p>
+            </div>
+            <button className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+              Request Export
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfileSettings;
