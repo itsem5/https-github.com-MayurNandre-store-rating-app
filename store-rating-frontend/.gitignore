@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -8,7 +6,7 @@
 # testing
 /coverage
 
-# production
+# production build
 /build
 
 # misc
@@ -18,6 +16,20 @@
 .env.test.local
 .env.production.local
 
+# log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tailwind cache
+/.turbo
+/.next
+/.parcel-cache
+/.sass-cache
