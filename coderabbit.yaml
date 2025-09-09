@@ -1,0 +1,15 @@
+project:
+  name: my-node-project
+  description: Generic configuration for reviewing Node.js code.
+
+environment:
+  node_version: "18"
+  dependencies:
+    - eslint
+
+scripts:
+  review:
+    - eslint .
+
+settings:
+  fail_on_error: true
